@@ -175,6 +175,8 @@ class FolderView(QtGui.QDialog):
         if self.model.record(index.row()).value(0).toInt()[0]==0:
             self.otherView = FolderView(self, self.UserID, True, self.model.record(index.row()).value(1).toInt()[0])
             self.otherView.open()
+            if self.otherView.copy is not None:
+                self.copy = self.otherView.copy
         elif self.model.record(index.row()).value(0).toInt()[0]==1:
             self.folder = self.model.record(index.row()).value(1).toInt()[0]
             folder = QtGui.QListWidgetItem(self.model.record(index.row()).value(2).toString()+" >")
@@ -204,8 +206,10 @@ class FolderView(QtGui.QDialog):
     
     def AddFileContextMenu(self, point):
         self.fileAddMenu = QtGui.QMenu()
-        self.fileAddMenu.addAction("Add folder", self.folderAdd)
-        self.fileAddMenu.addAction("Add file", self.fileAdd)
+        if not self.sharedOnly:
+            self.fileAddMenu.addAction("Add folder", self.folderAdd)
+            if self.folder != 0:
+                self.fileAddMenu.addAction("Add file", self.fileAdd)
         if len(self.View.selectedIndexes())>0:
             self.fileAddMenu.addAction("Copy", self.objCopy)
         if self.copy!=None:
