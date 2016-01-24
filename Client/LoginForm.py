@@ -1,5 +1,6 @@
 #!/usr/bin/python2.7
- 
+#This file is the first module for the HierarchyManager App. Use it to launch it in debug mode.
+
 import sys
 from PyQt4 import QtGui, QtCore, QtSql, uic
 from FolderView import *
@@ -63,7 +64,11 @@ class LoginForm(QtGui.QDialog):
         else:
             print query.lastError().databaseText()
 
-app = QtGui.QApplication(sys.argv)
-form = LoginForm()
-form.show()
-app.exec_()
+def Start():
+    app = QtGui.QApplication(sys.argv)
+    form = LoginForm()
+    form.show()
+    app.exec_()
+    
+if __name__ == "__main__":
+    Start()

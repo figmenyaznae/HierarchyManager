@@ -6,9 +6,6 @@ from FolderProperties import *
 from FileProperties import *
 DBFolderIDRole = QtCore.Qt.UserRole
 
-class obj(object):
-    pass
-
 class FolderView(QtGui.QDialog):
     def __init__(self, parent, UserID, sharedOnly = False, otherUser = 0):
         QtGui.QDialog.__init__(self)
@@ -172,23 +169,24 @@ class FolderView(QtGui.QDialog):
     
     def doubleClicked(self, index):
         self.frame.setVisible(False)
-        if self.model.record(index.row()).value(0).toInt()[0]==0:
-            self.otherView = FolderView(self, self.UserID, True, self.model.record(index.row()).value(1).toInt()[0])
+        i = index.row()
+        if self.model.record(i).value(0).toInt()[0]==0:
+            self.otherView = FolderView(self, self.UserID, True, self.model.record(i).value(1).toInt()[0])
             self.otherView.open()
             if self.otherView.copy is not None:
                 self.copy = self.otherView.copy
-        elif self.model.record(index.row()).value(0).toInt()[0]==1:
-            self.folder = self.model.record(index.row()).value(1).toInt()[0]
-            folder = QtGui.QListWidgetItem(self.model.record(index.row()).value(2).toString()+" >")
+        elif self.model.record(i).value(0).toInt()[0]==1:
+            self.folder = self.model.record(i).value(1).toInt()[0]
+            folder = QtGui.QListWidgetItem(self.model.record(i).value(2).toString()+" >")
             folder.setData(DBFolderIDRole,self.folder)
             self.history.addItem(folder)
             self.history.setCurrentItem(self.history.item(self.history.count()-1))
             self.model.setQuery(self.execQuery())
         else:
-            self.FileID = self.model.record(index.row()).value(1).toInt()[0]
-            self.FileName.setText("File: " + self.model.record(index.row()).value(2).toString())
-            self.Rating.setText("Rating: " + self.ratingStr(self.model.record(index.row()).value(4).toInt()[0]))
-            self.Shared.setText("Shared: " + str(self.model.record(index.row()).value(5).toInt()[0]>0))
+            self.FileID = self.model.record(i).value(1).toInt()[0]
+            self.FileName.setText("File: " + self.model.record(i).value(2).toString())
+            self.Rating.setText("Rating: " + self.ratingStr(self.model.record(i).value(4).toInt()[0]))
+            self.Shared.setText("Shared: " + str(self.model.record(i).value(5).toInt()[0]>0))
             self.CommentsModel.setQuery(self.commentQuery())
             self.frame.setVisible(True)
         
@@ -225,24 +223,29 @@ class FolderView(QtGui.QDialog):
         self.FP.open()
         
     def objCopy(self):
-        self.copy = obj
-        self.copy.Type = self.model.record(self.View.selectedIndexes()[0].row()).value(0).toInt()[0]
-        self.copy.ID = self.model.record(self.View.selectedIndexes()[0].row()).value(1).toInt()[0]
+        indexes = self.View.selectedIndexes()
+        self.copy = []
+        for i in indexes:
+            type = self.model.record(i.row()).value(0).toInt()[0]
+            if type!=0:
+                rec = {'Type':type, 'ID':self.model.record(i.row()).value(1).toInt()[0]}
+                self.copy.append(rec)
     
     def objPaste(self):
         if self.copy!=None:
-            if self.copy.Type == 1:
-                query = QtSql.QSqlQuery("INSERT INTO Edges(ChildID, ParentID, UserID)\
-                                        VALUES (?, ?, ?);")
-                query.bindValue(0, self.copy.ID)
-                query.bindValue(1, self.folder)
-                query.bindValue(2, self.UserID)
-                query.exec_()
-            else:
-                query = QtSql.QSqlQuery("INSERT INTO NodeFiles(NodeID, FileID)\
-                                        VALUES (?, ?);")
-                query.bindValue(0, self.folder)
-                query.bindValue(1, self.copy.ID)
-                query.exec_()
+            for index in self.copy:
+                if index['Type'] == 1:
+                    query = QtSql.QSqlQuery("INSERT INTO Edges(ChildID, ParentID, UserID)\
+                                            VALUES (?, ?, ?);")
+                    query.bindValue(0, index['ID'])
+                    query.bindValue(1, self.folder)
+                    query.bindValue(2, self.UserID)
+                    query.exec_()
+                else:
+                    query = QtSql.QSqlQuery("INSERT INTO NodeFiles(NodeID, FileID)\
+                                            VALUES (?, ?);")
+                    query.bindValue(0, self.folder)
+                    query.bindValue(1, index['ID'])
+                    query.exec_()
         
         self.model.setQuery(self.execQuery())

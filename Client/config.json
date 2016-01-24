@@ -1,1 +1,1 @@
-{"hostname": "localhost", "port": 3306, "databaseName": "hierarchymanager", "username": "root", "password": ""}
+{"hostname": "localhost", "port": 3306, "databaseName": "hierarchymanager", "username": "root", "password": "pass"}

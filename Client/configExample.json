@@ -1,0 +1,18 @@
+{
+    "description":"This file is an example of how should you store your database configs. Rename this file to 'config.json' to use defaults.",
+
+    "hostname": "Name or IP adress of the DB server you store data at.",
+    "hostname": "localhost",
+
+    "port": "Port to connect to DB server.",
+    "port": 3306,
+
+    "databaseName": "Name of the database where data is stored. should be 'hierarchymanager' unless other is explicitly reuired."
+    "databaseName": "hierarchymanager",
+
+    "username": "DB user name. User should have modification rights.",
+    "username": "root",
+
+    "password": "DB user password",
+    "password": ""
+}
