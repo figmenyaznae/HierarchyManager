@@ -23,8 +23,8 @@ class FileProperties(QtGui.QDialog):
         self.ui.filePath.setText(dialog)
     
     def accept(self):
-        query = QtSql.QSqlQuery("INSERT INTO Files(Name, ExtensionID, FileData, IsShared)\
-                                VALUES (?, ?, LOAD_FILE(?), ?);")
+        query = QtSql.QSqlQuery("INSERT INTO Files(Name, ExtensionID, FilePath, IsShared)\
+                                VALUES (?, ?, ?, ?);")
         query.bindValue(0, self.ui.nameEdit.text())
         query.bindValue(1, self.ui.fileExt.itemData(self.ui.fileExt.currentIndex()).toInt()[0])
         query.bindValue(2, self.ui.filePath.text())

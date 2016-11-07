@@ -107,7 +107,7 @@ class FolderView(QtGui.QDialog):
                     \
                     union\
                     \
-                    select 2 as Type, Files.FileID as ID, Files.Name as Name,\
+                    select 2 as Type, Files.FileID as ID, CONCAT(Files.Name, Files.FileID) as Name,\
                     FileExtensions.Icon as Icon, Ratings.Value as Rating, Files.IsShared\
                     from Files left join NodeFiles on NodeFiles.FileID=Files.FileID\
                     left join FileExtensions on Files.ExtensionID=FileExtensions.ExtensionID\
@@ -212,6 +212,8 @@ class FolderView(QtGui.QDialog):
             self.fileAddMenu.addAction("Copy", self.objCopy)
         if self.copy!=None:
             self.fileAddMenu.addAction("Paste", self.objPaste)
+        if len(self.View.selectedIndexes())>0:
+            self.fileAddMenu.addAction("Delete", self.objDelete)
         self.fileAddMenu.popup(self.pos() + point)
     
     def folderAdd(self):
@@ -249,3 +251,20 @@ class FolderView(QtGui.QDialog):
                     query.exec_()
         
         self.model.setQuery(self.execQuery())
+    def objDelete(self):
+        indexes = self.View.selectedIndexes()
+        for i in indexes:
+            id = self.model.record(i.row()).value(1).toInt()[0]
+            
+            query = QtSql.QSqlQuery("delete from nodefiles where FileID=? and NodeID=?;")
+            query.bindValue(0, id)
+            query.bindValue(1, self.folder)
+            query.exec_()
+            
+            query = QtSql.QSqlQuery("select * from nodefiles where FileID=?")
+            query.bindValue(0, id)
+            query.exec_()
+            if (query.numRowsAffected()==0):
+                query = QtSql.QSqlQuery("delete from files where FileID=?")
+                query.bindValue(0, id)
+                query.exec_()
