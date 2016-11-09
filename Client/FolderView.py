@@ -4,6 +4,7 @@ from PyQt4 import QtGui, QtCore, QtSql, uic
 from FolderModel import *
 from FolderProperties import *
 from FileProperties import *
+import Queries
 DBFolderIDRole = QtCore.Qt.UserRole
 
 class FolderView(QtGui.QDialog):
@@ -85,54 +86,19 @@ class FolderView(QtGui.QDialog):
     def execQuery(self):
         if self.folder>0:
             if self.sharedOnly:
-                query = QtSql.QSqlQuery("select 1 as Type, NodeID as ID, NodeName as Name,\
-                    NULL as Icon, NULL as Rating, IsShared\
-                    from Nodes left join Edges on Nodes.NodeID=Edges.ChildID\
-                    where Nodes.UserID=? and Edges.ParentID=? and IsShared=1\
-                    \
-                    union\
-                    \
-                    select 2 as Type, Files.FileID as ID, Files.Name as Name,\
-                    FileExtensions.Icon as Icon, Ratings.Value as Rating, Files.IsShared\
-                    from Files left join NodeFiles on NodeFiles.FileID=Files.FileID\
-                    left join FileExtensions on Files.ExtensionID=FileExtensions.ExtensionID\
-                    left join Ratings on Ratings.FileID=Files.FileID\
-                    where NodeFiles.NodeID=? and IsShared=1;")
+                query = QtSql.QSqlQuery(Queries.SELECT['SharedFolder'])
                 query.bindValue(0, self.Other)
             else:
-                query = QtSql.QSqlQuery("select 1 as Type, NodeID as ID, NodeName as Name,\
-                    NULL as Icon, NULL as Rating, IsShared\
-                    from Nodes left join Edges on Nodes.NodeID=Edges.ChildID\
-                    where Nodes.UserID=? and Edges.ParentID=?\
-                    \
-                    union\
-                    \
-                    select 2 as Type, Files.FileID as ID, CONCAT(Files.Name, Files.FileID) as Name,\
-                    FileExtensions.Icon as Icon, Ratings.Value as Rating, Files.IsShared\
-                    from Files left join NodeFiles on NodeFiles.FileID=Files.FileID\
-                    left join FileExtensions on Files.ExtensionID=FileExtensions.ExtensionID\
-                    left join Ratings on Ratings.FileID=Files.FileID\
-                    where NodeFiles.NodeID=?;")
+                query = QtSql.QSqlQuery(Queries.SELECT['nonSharedFolder'])
                 query.bindValue(0, self.UserID)
             query.bindValue(1, self.folder)
             query.bindValue(2, self.folder)
         else:
             if self.sharedOnly:
-                query = QtSql.QSqlQuery("select 1 as Type, NodeID as ID, NodeName as Name\
-                    from Nodes left join Edges on Nodes.NodeID=Edges.ChildID\
-                    where Nodes.UserID=? and Edges.ParentID is NULL and IsShared=1;")
+                query = QtSql.QSqlQuery(Queries.SELECT['SharedRoot'])
                 query.bindValue(0, self.Other)
             else:
-                query = QtSql.QSqlQuery("select 1 as Type, NodeID as ID, NodeName as Name\
-                    from Nodes left join Edges on Nodes.NodeID=Edges.ChildID\
-                    where Nodes.UserID=? and Edges.ParentID is NULL\
-                    \
-                    union\
-                    \
-                    select 0 as Type, UserID as ID, LoginWord as Name\
-                    from Users\
-                    where UserID in (select userID from nodes where IsShared=1 group by UserID having count(*)>0) and\
-                    UserID<>?;")
+                query = QtSql.QSqlQuery(Queries.SELECT['nonSharedRoot'])
                 query.bindValue(0, self.UserID)
                 query.bindValue(1, self.UserID)
         
@@ -140,8 +106,7 @@ class FolderView(QtGui.QDialog):
         return query
     
     def createComment(self):
-        query = QtSql.QSqlQuery("INSERT INTO Comments(UserID, FileID, CommentText)\
-                                VALUES (?, ?, ?);")
+        query = QtSql.QSqlQuery(Queries.CREATE['Comment'])
         query.bindValue(0, self.UserID)
         query.bindValue(1, self.FileID)
         query.bindValue(2, self.myComment.text())
@@ -150,10 +115,7 @@ class FolderView(QtGui.QDialog):
             self.CommentsModel.setQuery(self.commentQuery())
     
     def commentQuery(self):
-        query = QtSql.QSqlQuery("select Comments.commentID, Users.LoginWord, Comments.CommentText\
-                                from Comments\
-                                left join Users on Comments.UserID=Users.UserID\
-                                where Comments.FileID=?;")
+        query = QtSql.QSqlQuery(Queries.SELECT['Comments'])
                                 
         query.bindValue(0, self.FileID)
         query.exec_()
@@ -237,34 +199,37 @@ class FolderView(QtGui.QDialog):
         if self.copy!=None:
             for index in self.copy:
                 if index['Type'] == 1:
-                    query = QtSql.QSqlQuery("INSERT INTO Edges(ChildID, ParentID, UserID)\
-                                            VALUES (?, ?, ?);")
+                    query = QtSql.QSqlQuery(Queries.INSERT['PasteFolder'])
                     query.bindValue(0, index['ID'])
                     query.bindValue(1, self.folder)
                     query.bindValue(2, self.UserID)
                     query.exec_()
                 else:
-                    query = QtSql.QSqlQuery("INSERT INTO NodeFiles(NodeID, FileID)\
-                                            VALUES (?, ?);")
+                    query = QtSql.QSqlQuery(Queries.INSERT['PasteFile'])
                     query.bindValue(0, self.folder)
                     query.bindValue(1, index['ID'])
                     query.exec_()
         
         self.model.setQuery(self.execQuery())
+        
     def objDelete(self):
         indexes = self.View.selectedIndexes()
         for i in indexes:
+            type = self.model.record(i.row()).value(0).toInt()[0]
             id = self.model.record(i.row()).value(1).toInt()[0]
-            
-            query = QtSql.QSqlQuery("delete from nodefiles where FileID=? and NodeID=?;")
-            query.bindValue(0, id)
-            query.bindValue(1, self.folder)
-            query.exec_()
-            
-            query = QtSql.QSqlQuery("select * from nodefiles where FileID=?")
-            query.bindValue(0, id)
-            query.exec_()
-            if (query.numRowsAffected()==0):
-                query = QtSql.QSqlQuery("delete from files where FileID=?")
+            print type, id
+            if type==2:
+                query = QtSql.QSqlQuery(Queries.DELETE['FileFromFolder'])
+                query.bindValue(0, id)
+                query.bindValue(1, self.folder)
+                query.exec_()
+                
+                query = QtSql.QSqlQuery(Queries.SELECT['FileBindings'])
                 query.bindValue(0, id)
                 query.exec_()
+                if (query.numRowsAffected()==0):
+                    query = QtSql.QSqlQuery(Queries.DELETE['FileCompletely'])
+                    query.bindValue(0, id)
+                    query.exec_()
+                    
+        self.model.setQuery(self.execQuery())

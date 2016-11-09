@@ -5,6 +5,7 @@ import sys
 from PyQt4 import QtGui, QtCore, QtSql, uic
 from FolderView import *
 from DbConfig import DbConfig
+import Queries
 
 class RegisterForm(QtGui.QDialog):
     def __init__(self, parent):
@@ -15,8 +16,7 @@ class RegisterForm(QtGui.QDialog):
     
     def accept(self):
         if (self.ui.passwordEdit.text()==self.ui.passwordEdit_2.text()):
-            query = QtSql.QSqlQuery("INSERT INTO Users(LoginWord, PassPhrase, FirstName, LastName, RootNodeID)\
-                                    VALUES (?, ?, ?, ?, NULL);")
+            query = QtSql.QSqlQuery(Queries.INSERT['User'])
             query.bindValue(0, self.ui.usernameEdit.text())
             query.bindValue(1, self.ui.passwordEdit.text())
             query.bindValue(2, self.ui.nameEdit.text())
@@ -47,7 +47,7 @@ class LoginForm(QtGui.QDialog):
         self.register.open()
     
     def tryToLogin(self):
-        query = QtSql.QSqlQuery("SELECT UserId from users where LoginWord=? and PassPhrase=?")
+        query = QtSql.QSqlQuery(Queries.SELECT['Users'])
         query.bindValue(0, self.loginEdit.text())
         query.bindValue(1, self.passwordEdit.text())
         result = query.exec_()
@@ -56,6 +56,8 @@ class LoginForm(QtGui.QDialog):
         if result:
             if query.size()>0:
                 query.first() 
+                if self.ui.rememberMe.checkState() == QtCore.Qt.Checked:
+                    pass #TODO
                 self.view = FolderView(self, query.value(0).toInt()[0])
                 self.view.show()
                 self.hide()
