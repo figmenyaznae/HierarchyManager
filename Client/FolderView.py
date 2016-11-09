@@ -10,78 +10,39 @@ DBFolderIDRole = QtCore.Qt.UserRole
 class FolderView(QtGui.QDialog):
     def __init__(self, parent, UserID, sharedOnly = False, otherUser = 0):
         QtGui.QDialog.__init__(self)
-        self.setWindowTitle("Hierarchy Manager")
+        self.ui = uic.loadUi("FolderView.ui", self)
+        
         self.Other = otherUser
         self.UserID = UserID
         self.sharedOnly = sharedOnly
         self.parent = parent
         self.folder = 0
         self.copy = None
+        self.FileID = 0
+        
+        self.CommentsModel = QtSql.QSqlQueryModel()
+        self.CommentsModel.setQuery(self.commentQuery())
+        self.ui.comentsList.setModel(self.CommentsModel)
+        self.ui.comentsList.setModelColumn(2)
         
         self.model = FolderModel()
         self.model.setQuery(self.execQuery())
         
-        self.View = QtGui.QListView(self)
-        self.View.setModel(self.model)
-        self.View.setSpacing(10)
-        self.View.setViewMode(QtGui.QListView.IconMode)
-        self.View.doubleClicked.connect(self.doubleClicked)
-        self.View.customContextMenuRequested.connect(self.AddFileContextMenu)
-        self.View.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        
-        self.history = QtGui.QListWidget()
-        self.history.setFlow(QtGui.QListView.LeftToRight)
-        self.history.setMaximumHeight(25)
-        self.history.itemClicked.connect(self.selectFolder)
-        
         home = QtGui.QListWidgetItem('Home >')
         home.setData(DBFolderIDRole,0)
-        self.history.addItem(home)
-        self.history.setCurrentItem(self.history.item(0))
+        self.ui.history.addItem(home)
+        self.ui.history.setCurrentItem(self.ui.history.item(0))
         
-        self.FileName = QtGui.QLabel("File: ")
-        self.Rating = QtGui.QLabel("Rating:")
-        self.Shared = QtGui.QLabel("Rating:")
-        CommentLabel = QtGui.QLabel("Comments")
+        self.ui.mainView.setModel(self.model)
+        self.ui.mainView.doubleClicked.connect(self.doubleClicked)
+        self.ui.mainView.customContextMenuRequested.connect(self.AddFileContextMenu)
+        self.ui.mainView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         
-        self.FileID = 0
-        self.CommentsModel = QtSql.QSqlQueryModel()
-        self.CommentsModel.setQuery(self.commentQuery())
-        self.Comments = QtGui.QListView()
-        self.Comments.setModel(self.CommentsModel)
-        self.Comments.setModelColumn(2)
-        self.Comments.setMaximumWidth(300)
-        self.Comments.setSelectionMode(QtGui.QAbstractItemView.NoSelection)
-        self.Comments.setWordWrap(True)
+        self.ui.history.itemClicked.connect(self.selectFolder)
         
-        main = QtGui.QHBoxLayout()
+        self.connect(self.ui.submitComment, QtCore.SIGNAL("clicked()"), self.createComment)
         
-        box = QtGui.QVBoxLayout()
-        box.addWidget(self.history)
-        box.addWidget(self.View)
-        main.addLayout(box)
-        
-        self.myComment = QtGui.QLineEdit(self)
-        SubmitComment = QtGui.QPushButton("Submit")
-        self.connect(SubmitComment, QtCore.SIGNAL("clicked()"), self.createComment)
-        
-        input = QtGui.QHBoxLayout()
-        input.addWidget(self.myComment)
-        input.addWidget(SubmitComment)
-        
-        box = QtGui.QVBoxLayout()
-        box.addWidget(self.FileName)
-        box.addWidget(self.Rating)
-        box.addWidget(self.Shared)
-        box.addWidget(CommentLabel)
-        box.addWidget(self.Comments)
-        box.addLayout(input)
-        self.frame = QtGui.QFrame()
-        self.frame.setLayout(box)
-        self.frame.setVisible(False)
-        main.addWidget(self.frame)
-        self.setLayout(main)
-        self.resize(700, 500)
+        self.ui.frame.setVisible(False)
         
     def execQuery(self):
         if self.folder>0:
@@ -106,12 +67,12 @@ class FolderView(QtGui.QDialog):
         return query
     
     def createComment(self):
-        query = QtSql.QSqlQuery(Queries.CREATE['Comment'])
+        query = QtSql.QSqlQuery(Queries.INSERT['Comment'])
         query.bindValue(0, self.UserID)
         query.bindValue(1, self.FileID)
-        query.bindValue(2, self.myComment.text())
+        query.bindValue(2, self.ui.myComment.text())
         if query.exec_():
-            self.myComment.setText("")
+            self.ui.myComment.setText("")
             self.CommentsModel.setQuery(self.commentQuery())
     
     def commentQuery(self):
@@ -130,7 +91,7 @@ class FolderView(QtGui.QDialog):
         return s
     
     def doubleClicked(self, index):
-        self.frame.setVisible(False)
+        self.ui.frame.setVisible(False)
         i = index.row()
         if self.model.record(i).value(0).toInt()[0]==0:
             self.otherView = FolderView(self, self.UserID, True, self.model.record(i).value(1).toInt()[0])
@@ -141,28 +102,31 @@ class FolderView(QtGui.QDialog):
             self.folder = self.model.record(i).value(1).toInt()[0]
             folder = QtGui.QListWidgetItem(self.model.record(i).value(2).toString()+" >")
             folder.setData(DBFolderIDRole,self.folder)
-            self.history.addItem(folder)
-            self.history.setCurrentItem(self.history.item(self.history.count()-1))
+            self.ui.history.addItem(folder)
+            self.ui.history.setCurrentItem(self.ui.history.item(self.ui.history.count()-1))
             self.model.setQuery(self.execQuery())
         else:
             self.FileID = self.model.record(i).value(1).toInt()[0]
-            self.FileName.setText("File: " + self.model.record(i).value(2).toString())
-            self.Rating.setText("Rating: " + self.ratingStr(self.model.record(i).value(4).toInt()[0]))
-            self.Shared.setText("Shared: " + str(self.model.record(i).value(5).toInt()[0]>0))
+            self.ui.fileName.setText("File: " + self.model.record(i).value(2).toString())
+            self.ui.rating.setText("Rating: " + self.ratingStr(self.model.record(i).value(4).toInt()[0]))
+            self.ui.shared.setText("Shared: " + str(self.model.record(i).value(5).toInt()[0]>0))
             self.CommentsModel.setQuery(self.commentQuery())
-            self.frame.setVisible(True)
+            self.ui.frame.setVisible(True)
         
     def selectFolder(self, item):
-        self.frame.setVisible(False)
+        self.ui.frame.setVisible(False)
         self.folder = item.data(DBFolderIDRole).toInt()[0]
         self.model.setQuery(self.execQuery())
-        hist = [(self.history.item(i).text(),self.history.item(i).data(DBFolderIDRole).toInt()[0]) for i in xrange(self.history.currentRow()+1)]
-        self.history.clear()
+        hist = [ (
+                self.ui.history.item(i).text(),
+                self.ui.history.item(i).data(DBFolderIDRole).toInt()[0]
+            ) for i in xrange(self.ui.history.currentRow()+1)]
+        self.ui.history.clear()
         for item in hist:
             folder = QtGui.QListWidgetItem(item[0])
             folder.setData(DBFolderIDRole,item[1])
-            self.history.addItem(folder)
-        self.history.setCurrentItem(self.history.item(self.history.count()-1))
+            self.ui.history.addItem(folder)
+        self.ui.history.setCurrentItem(self.ui.history.item(self.ui.history.count()-1))
     
     def AddFileContextMenu(self, point):
         self.fileAddMenu = QtGui.QMenu()
@@ -170,11 +134,11 @@ class FolderView(QtGui.QDialog):
             self.fileAddMenu.addAction("Add folder", self.folderAdd)
             if self.folder != 0:
                 self.fileAddMenu.addAction("Add file", self.fileAdd)
-        if len(self.View.selectedIndexes())>0:
+        if len(self.ui.mainView.selectedIndexes())>0:
             self.fileAddMenu.addAction("Copy", self.objCopy)
         if self.copy!=None:
             self.fileAddMenu.addAction("Paste", self.objPaste)
-        if len(self.View.selectedIndexes())>0:
+        if len(self.ui.mainView.selectedIndexes())>0:
             self.fileAddMenu.addAction("Delete", self.objDelete)
         self.fileAddMenu.popup(self.pos() + point)
     
@@ -187,7 +151,7 @@ class FolderView(QtGui.QDialog):
         self.FP.open()
         
     def objCopy(self):
-        indexes = self.View.selectedIndexes()
+        indexes = self.ui.mainView.selectedIndexes()
         self.copy = []
         for i in indexes:
             type = self.model.record(i.row()).value(0).toInt()[0]
@@ -213,7 +177,7 @@ class FolderView(QtGui.QDialog):
         self.model.setQuery(self.execQuery())
         
     def objDelete(self):
-        indexes = self.View.selectedIndexes()
+        indexes = self.ui.mainView.selectedIndexes()
         for i in indexes:
             type = self.model.record(i.row()).value(0).toInt()[0]
             id = self.model.record(i.row()).value(1).toInt()[0]
