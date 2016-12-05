@@ -22,7 +22,7 @@ where Nodes.UserID=? and Edges.ParentID=?
 
 union
 
-select 2 as Type, Files.FileID as ID, CONCAT(Files.Name, Files.FileID) as Name,
+select 2 as Type, Files.FileID as ID, Files.Name as Name,
     FileExtensions.Icon as Icon, Ratings.Value as Rating, Files.IsShared
 from Files left join NodeFiles on NodeFiles.FileID=Files.FileID
     left join FileExtensions on Files.ExtensionID=FileExtensions.ExtensionID

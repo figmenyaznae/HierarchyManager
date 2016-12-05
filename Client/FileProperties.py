@@ -20,7 +20,11 @@ class FileProperties(QtGui.QDialog):
             self.ui.fileExt.addItem(query.record().value(1).toString(),QtCore.QVariant(query.record().value(0).toInt()[0]))
     
     def fileDialog(self):
-        dialog = QtGui.QFileDialog.getOpenFileName()
+        dialog = QtGui.QFileDialog(self)
+        dialog.setFileMode(QtGui.QFileDialog.ExistingFiles)
+        if dialog.exec_():
+            fileNames = dialog.selectedFiles();
+        print [s for s in fileNames]
         self.ui.filePath.setText(dialog)
     
     def accept(self):

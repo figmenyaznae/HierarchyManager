@@ -139,8 +139,8 @@ class FolderView(QtGui.QDialog):
         if self.copy!=None:
             self.fileAddMenu.addAction("Paste", self.objPaste)
         if len(self.ui.mainView.selectedIndexes())>0:
-            self.fileAddMenu.addAction("Delete", self.objDelete)
-        self.fileAddMenu.popup(self.pos() + point)
+            self.fileAddMenu.addAction("Delete", self.objDelete)    
+        self.fileAddMenu.popup(self.mapToGlobal(point))
     
     def folderAdd(self):
         self.FP = FolderProperties(self, self.folder, self.UserID)
