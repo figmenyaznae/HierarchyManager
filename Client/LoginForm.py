@@ -3,9 +3,14 @@
 
 import sys
 from PyQt4 import QtGui, QtCore, QtSql, uic
+from sqlalchemy import and_
 from FolderView import *
-from DbConfig import DbConfig
+from DbConfig import *
+from dbmodel import *
 import Queries
+import base64
+
+wrapNone = lambda s: None if s=='' else str(s)
 
 class RegisterForm(QtGui.QDialog):
     def __init__(self, parent):
@@ -13,15 +18,19 @@ class RegisterForm(QtGui.QDialog):
         self.ui = uic.loadUi("RegisterForm.ui", self)
         self.connect(self.ui.acceptButton, QtCore.SIGNAL("clicked()"), self.accept)
         self.connect(self.ui.declineButton, QtCore.SIGNAL("clicked()"), self.close)
+        
+        self.session = Session()
     
     def accept(self):
-        if (self.ui.passwordEdit.text()==self.ui.passwordEdit_2.text()):
-            query = QtSql.QSqlQuery(Queries.INSERT['User'])
-            query.bindValue(0, self.ui.usernameEdit.text())
-            query.bindValue(1, self.ui.passwordEdit.text())
-            query.bindValue(2, self.ui.nameEdit.text())
-            query.bindValue(3, self.ui.surnameEdit.text())
-            query.exec_()
+        login = wrapNone(self.ui.usernameEdit.text())
+        password = wrapNone(self.ui.passwordEdit.text())
+        password_confirm = wrapNone(self.ui.passwordEdit_2.text())
+        first_name = wrapNone(self.ui.nameEdit.text())
+        last_name = wrapNone(self.ui.surnameEdit.text())
+        if (login is not None and password==password_confirm):
+            user = User(login=login, password=password, first_name=first_name, last_name=last_name)
+            self.session.add(user)
+            self.session.commit()
             self.close()
         else:
             QtGui.QMessageBox.critical(self, "Error", "Passwords does not match!")
@@ -33,13 +42,18 @@ class LoginForm(QtGui.QDialog):
         
         self.connect(self.ui.enterButton, QtCore.SIGNAL("clicked()"), self.tryToLogin)
         self.connect(self.ui.registerButton, QtCore.SIGNAL("clicked()"), self.register)
-        db = QtSql.QSqlDatabase.addDatabase("QMYSQL")
-        config = DbConfig()
-        config.load()
-        config.config(db)
-        ok = db.open()
-        
-        if not ok:
+                
+        with open('session.conf') as f:
+            s = base64.b64decode(f.read())
+            login = s[:20].rstrip()
+            password = s[20:].rstrip()
+            print login, password
+            self.loginEdit.setText(login)
+            self.passwordEdit.setText(password)
+            self.ui.rememberMe.setChecked(True)
+            
+        self.session = Session()
+        if self.session is None:
             QtGui.QMessageBox.critical(self, "Error", "Database not connected. You will not be able to log in.")
     
     def register(self):
@@ -47,24 +61,25 @@ class LoginForm(QtGui.QDialog):
         self.register.open()
     
     def tryToLogin(self):
-        query = QtSql.QSqlQuery(Queries.SELECT['Users'])
-        query.bindValue(0, self.loginEdit.text())
-        query.bindValue(1, self.passwordEdit.text())
-        result = query.exec_()
-        grid = self.layout()
-        label = QtGui.QLabel()
-        if result:
-            if query.size()>0:
-                query.first() 
+        try:
+            login = str(self.loginEdit.text())
+            password = str(self.passwordEdit.text())
+            print login, password
+            user_id = self.session.query(User.id).filter(and_(User.login==login, User.password==password)).one()
+            print user_id
+            if user_id == None:
+                QtGui.QMessageBox.critical(self, "Error", "Wrong username/password")
+            else:
                 if self.ui.rememberMe.checkState() == QtCore.Qt.Checked:
-                    pass #TODO
-                self.view = FolderView(self, query.value(0).toInt()[0])
+                    with open('session.conf', 'w') as f:
+                        f.write(base64.b64encode('{:<20}{:<20}'.format(login, password)))
+                self.view = FolderView(self, user_id)
                 self.view.show()
                 self.hide()
-            else:
-                QtGui.QMessageBox.critical(self, "Error", "Wrong username/password")
-        else:
-            print query.lastError().databaseText()
+        except Exception as e:
+            print e
+            QtGui.QMessageBox.critical(self, "Error", "Database Error")
+            
 
 def Start():
     app = QtGui.QApplication(sys.argv)

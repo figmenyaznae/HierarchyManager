@@ -58,3 +58,4 @@ target/
 Client/.idea/
 Client/config.json
 *.db
+*.conf
