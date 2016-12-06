@@ -2,12 +2,11 @@
 #This file is the first module for the HierarchyManager App. Use it to launch it in debug mode.
 
 import sys
-from PyQt4 import QtGui, QtCore, QtSql, uic
+from PyQt4 import QtGui, QtCore, uic
 from sqlalchemy import and_
 from FolderView import *
 from DbConfig import *
-from dbmodel import *
-import Queries
+from DbModel import *
 import base64
 
 wrapNone = lambda s: None if s=='' else str(s)
@@ -65,7 +64,7 @@ class LoginForm(QtGui.QDialog):
             login = str(self.loginEdit.text())
             password = str(self.passwordEdit.text())
             print login, password
-            user_id = self.session.query(User.id).filter(and_(User.login==login, User.password==password)).one()
+            user_id = self.session.query(User.id).filter(and_(User.login==login, User.password==password)).one_or_none()
             print user_id
             if user_id == None:
                 QtGui.QMessageBox.critical(self, "Error", "Wrong username/password")
@@ -73,7 +72,7 @@ class LoginForm(QtGui.QDialog):
                 if self.ui.rememberMe.checkState() == QtCore.Qt.Checked:
                     with open('session.conf', 'w') as f:
                         f.write(base64.b64encode('{:<20}{:<20}'.format(login, password)))
-                self.view = FolderView(self, user_id)
+                self.view = FolderView(self, user_id[0])
                 self.view.show()
                 self.hide()
         except Exception as e:

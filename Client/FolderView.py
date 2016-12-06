@@ -1,9 +1,12 @@
 #!/usr/bin/python2.7
 
 from PyQt4 import QtGui, QtCore, QtSql, uic
+from sqlalchemy import and_
 from FolderModel import *
 from FolderProperties import *
 from FileProperties import *
+from DbConfig import *
+from DbModel import *
 import Queries
 DBFolderIDRole = QtCore.Qt.UserRole
 
@@ -20,13 +23,17 @@ class FolderView(QtGui.QDialog):
         self.copy = None
         self.FileID = 0
         
+        '''TODO
         self.CommentsModel = QtSql.QSqlQueryModel()
         self.CommentsModel.setQuery(self.commentQuery())
         self.ui.comentsList.setModel(self.CommentsModel)
         self.ui.comentsList.setModelColumn(2)
+        '''
+        
+        self.session = Session()
         
         self.model = FolderModel()
-        self.model.setQuery(self.execQuery())
+        self.model.setDataList(self.execQuery())
         
         home = QtGui.QListWidgetItem('Home >')
         home.setData(DBFolderIDRole,0)
@@ -45,26 +52,26 @@ class FolderView(QtGui.QDialog):
         self.ui.frame.setVisible(False)
         
     def execQuery(self):
-        if self.folder>0:
+        list = []
+        if self.folder==0:
             if self.sharedOnly:
-                query = QtSql.QSqlQuery(Queries.SELECT['SharedFolder'])
-                query.bindValue(0, self.Other)
+                pass #SharedRoot
             else:
-                query = QtSql.QSqlQuery(Queries.SELECT['nonSharedFolder'])
-                query.bindValue(0, self.UserID)
-            query.bindValue(1, self.folder)
-            query.bindValue(2, self.folder)
+                for node in self.session.query(Node).filter(and_(Node.user_id==self.UserID, Node.parent==None)):
+                    list.append((1, node.id, node.name, ''))
         else:
             if self.sharedOnly:
-                query = QtSql.QSqlQuery(Queries.SELECT['SharedRoot'])
-                query.bindValue(0, self.Other)
+                pass #SharedFolder
             else:
-                query = QtSql.QSqlQuery(Queries.SELECT['nonSharedRoot'])
-                query.bindValue(0, self.UserID)
-                query.bindValue(1, self.UserID)
+                parent = [parent.id for parent in self.session.query(Node).filter(Node.id==self.folder).one().children]
+                for node in self.session.query(Node)\
+                .filter(and_(
+                    Node.user_id==self.UserID,
+                    Node.id.in_(parent)
+                )):
+                    list.append((1, node.id, node.name, ''))
         
-        query.exec_()
-        return query
+        return list
     
     def createComment(self):
         query = QtSql.QSqlQuery(Queries.INSERT['Comment'])
@@ -92,31 +99,33 @@ class FolderView(QtGui.QDialog):
     
     def doubleClicked(self, index):
         self.ui.frame.setVisible(False)
-        i = index.row()
-        if self.model.record(i).value(0).toInt()[0]==0:
+        type = self.model.data(index, QtCore.Qt.UserRole+1)
+        
+        self.model.setDataList(self.execQuery())
+        if type==0:
             self.otherView = FolderView(self, self.UserID, True, self.model.record(i).value(1).toInt()[0])
             self.otherView.open()
             if self.otherView.copy is not None:
                 self.copy = self.otherView.copy
-        elif self.model.record(i).value(0).toInt()[0]==1:
-            self.folder = self.model.record(i).value(1).toInt()[0]
-            folder = QtGui.QListWidgetItem(self.model.record(i).value(2).toString()+" >")
+        elif type==1:
+            self.folder = self.model.data(index, QtCore.Qt.UserRole)
+            folder = QtGui.QListWidgetItem(self.model.data(index, QtCore.Qt.DisplayRole)+" >")
             folder.setData(DBFolderIDRole,self.folder)
             self.ui.history.addItem(folder)
             self.ui.history.setCurrentItem(self.ui.history.item(self.ui.history.count()-1))
-            self.model.setQuery(self.execQuery())
+            self.model.setDataList(self.execQuery())
         else:
             self.FileID = self.model.record(i).value(1).toInt()[0]
             self.ui.fileName.setText("File: " + self.model.record(i).value(2).toString())
             self.ui.rating.setText("Rating: " + self.ratingStr(self.model.record(i).value(4).toInt()[0]))
             self.ui.shared.setText("Shared: " + str(self.model.record(i).value(5).toInt()[0]>0))
-            self.CommentsModel.setQuery(self.commentQuery())
+            #self.CommentsModel.setQuery(self.commentQuery())
             self.ui.frame.setVisible(True)
         
     def selectFolder(self, item):
         self.ui.frame.setVisible(False)
         self.folder = item.data(DBFolderIDRole).toInt()[0]
-        self.model.setQuery(self.execQuery())
+        self.model.setDataList(self.execQuery())
         hist = [ (
                 self.ui.history.item(i).text(),
                 self.ui.history.item(i).data(DBFolderIDRole).toInt()[0]
