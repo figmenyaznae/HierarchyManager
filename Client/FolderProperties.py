@@ -1,5 +1,5 @@
 #!/usr/bin/python2.7
-from PyQt4 import QtGui, QtCore, QtSql, uic
+from PyQt4 import QtGui, QtCore, uic
 from DbConfig import *
 from DbModel import *
 from utils import *

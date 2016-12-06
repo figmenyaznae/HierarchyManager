@@ -13,7 +13,7 @@ class FileExtension(Base):
     icon = Column(String)
 
     def __repr__(self):
-       return "<FileExtension(mask='%s', extension='%s', icon='%s')>" % (self.mask, self.extension, self.icon)
+       return "<FileExtension(name='%s', mask='%s', icon='%s')>" % (self.mask, self.extension, self.icon)
 
 class File(Base):
     __tablename__ = 'Files'
@@ -25,6 +25,9 @@ class File(Base):
     path = Column(String)
     is_shared = Column(Boolean)
 
+    def __repr__(self):
+       return "<File(name='%s', extension='%d', path='%s', isShared='%r')>" % (self.name, self.extension_id, self.path, is_shared)
+    
 class User(Base):
     __tablename__ = 'Users'
     id = Column(Integer, primary_key=True)
