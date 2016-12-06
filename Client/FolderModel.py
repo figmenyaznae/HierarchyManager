@@ -1,6 +1,14 @@
 #!/usr/bin/python2.7
 from PyQt4 import QtGui, QtCore
 
+ItemNameRole = QtCore.Qt.DisplayRole
+ItemIconRole = QtCore.Qt.DecorationRole
+ItemIDRole = QtCore.Qt.UserRole
+ItemTypeRole = QtCore.Qt.UserRole+1
+#TODO
+ItemRatingRole = QtCore.Qt.UserRole+2
+ItemIsSharedRole = QtCore.Qt.UserRole+3
+
 class FolderItem(object):
     def __init__(self, type, id, name, icon):
         self.type = type
@@ -23,9 +31,9 @@ class FolderModel(QtCore.QAbstractListModel):
         return len(self.record)
         
     def data(self, index, role):
-        if index.isValid() and role==QtCore.Qt.DisplayRole:
+        if index.isValid() and role==ItemNameRole:
             return self.record[index.row()].name
-        elif index.isValid() and role==QtCore.Qt.DecorationRole:
+        elif index.isValid() and role==ItemIconRole:
             type = self.record[index.row()].type
             if type==0:
                 icon = QtGui.QIcon("user.png")
@@ -37,9 +45,9 @@ class FolderModel(QtCore.QAbstractListModel):
                     s = "file.png"
                 icon = QtGui.QIcon(s)
             return icon
-        elif index.isValid() and role==QtCore.Qt.UserRole:
+        elif index.isValid() and role==ItemIDRole:
             return self.record[index.row()].id
-        elif index.isValid() and role==QtCore.Qt.UserRole+1:
+        elif index.isValid() and role==ItemTypeRole:
             return self.record[index.row()].type
         else:
             return None

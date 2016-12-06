@@ -8,8 +8,8 @@ class FileExtension(Base):
     __tablename__ = 'FileExtensions'
 
     id = Column(Integer, primary_key=True)
+    name = Column(String)
     mask = Column(String)
-    extension = Column(String)
     icon = Column(String)
 
     def __repr__(self):

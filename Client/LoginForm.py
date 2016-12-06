@@ -7,9 +7,9 @@ from sqlalchemy import and_
 from FolderView import *
 from DbConfig import *
 from DbModel import *
+from utils import *
 import base64
 
-wrapNone = lambda s: None if s=='' else str(s)
 
 class RegisterForm(QtGui.QDialog):
     def __init__(self, parent):
@@ -46,7 +46,6 @@ class LoginForm(QtGui.QDialog):
             s = base64.b64decode(f.read())
             login = s[:20].rstrip()
             password = s[20:].rstrip()
-            print login, password
             self.loginEdit.setText(login)
             self.passwordEdit.setText(password)
             self.ui.rememberMe.setChecked(True)
@@ -63,9 +62,7 @@ class LoginForm(QtGui.QDialog):
         try:
             login = str(self.loginEdit.text())
             password = str(self.passwordEdit.text())
-            print login, password
             user_id = self.session.query(User.id).filter(and_(User.login==login, User.password==password)).one_or_none()
-            print user_id
             if user_id == None:
                 QtGui.QMessageBox.critical(self, "Error", "Wrong username/password")
             else:

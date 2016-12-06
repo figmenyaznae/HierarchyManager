@@ -1,31 +1,32 @@
 #!/usr/bin/python2.7
 from PyQt4 import QtGui, QtCore, QtSql, uic
-import Queries
+from DbConfig import *
+from DbModel import *
+from utils import *
 
 class FolderProperties(QtGui.QDialog):
     def __init__(self, parent, parentFolder, user, folder = 0):
         QtGui.QDialog.__init__(self, parent)
         self.ui = uic.loadUi("FolderProperties.ui", self)
-        self.FolderID = parentFolder
-        self.UserID = user
-        self.selfID = folder
+        self.parentID = parentFolder
+        self.userID = user
+        #self.selfID = folder #TODO
+        self.session = Session()
         self.connect(self.ui.acceptButton, QtCore.SIGNAL("clicked()"), self.accept)
         self.connect(self.ui.declineButton, QtCore.SIGNAL("clicked()"), self.close)
         
     def accept(self):
-        query = QtSql.QSqlQuery(Queries.INSERT['Folder'])
-        query.bindValue(0, self.ui.nameEdit.text())
-        query.bindValue(1, self.UserID)
-        query.bindValue(2, int(self.isShared.checkState()==QtCore.Qt.Checked))
-        query.exec_()
-        self.selfID = query.lastInsertId().toInt()[0]
+        node = Node(
+            name=wrapNone(self.ui.nameEdit.text()),
+            user_id=self.userID,
+            is_shared=self.isShared.checkState()==QtCore.Qt.Checked
+        )
         
-        if self.FolderID>0:
-            query = QtSql.QSqlQuery(Queries.INSERT['PasteFolder'])
-            query.bindValue(0, self.selfID)
-            query.bindValue(1, self.FolderID)
-            query.bindValue(2, self.UserID)
-            query.exec_()
+        if self.parentID!=0:
+            parent = self.session.query(Node).filter(Node.id==self.parentID).one()
+            node.parent = [parent]
         
-        self.parent().model.setQuery(self.parent().execQuery())
+        self.session.add(node)
+        self.session.commit()
+        self.parent().model.setDataList(self.parent().execQuery())
         self.close()
