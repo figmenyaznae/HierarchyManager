@@ -62,3 +62,16 @@ class Node(Base):
 
     def __repr__(self):
         return "<Node(name='%s', user_id='%d', isShared='%r')>" % (self.name, self.user_id, self.is_shared)
+
+class Comment(Base):
+    __tablename__ = 'Comments'
+    
+    id = Column(Integer, primary_key=True)
+    text = Column(String)
+    user_id = Column(ForeignKey('Users.id'))
+    user = relationship('User')
+    file_id = Column(ForeignKey('Files.id'))
+    file = relationship('File', backref='comments')
+    
+    def __repr__(self):
+        return "<Comment(name='%s', user_id='%d', file_id='%d')>" % (self.text, self.user_id, self.file_id)

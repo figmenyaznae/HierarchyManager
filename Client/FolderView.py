@@ -17,21 +17,17 @@ class FolderView(QtGui.QDialog):
         self.ui = uic.loadUi("FolderView.ui", self)
         
         self.Other = otherUser
-        self.UserID = UserID
+        self.user = UserID
         self.sharedOnly = sharedOnly
         self.parent = parent
         self.folder = 0
+        self.file = 0
         self.copy = None
-        self.FileID = 0
         
         self.session = Session()
         
-        '''TODO
-        self.CommentsModel = QtSql.QSqlQueryModel()
-        self.CommentsModel.setQuery(self.commentQuery())
+        self.CommentsModel = QtGui.QStringListModel()
         self.ui.comentsList.setModel(self.CommentsModel)
-        self.ui.comentsList.setModelColumn(2)
-        '''
         
         self.model = FolderModel()
         self.model.setDataList(self.execQuery())
@@ -48,7 +44,7 @@ class FolderView(QtGui.QDialog):
         
         self.ui.history.itemClicked.connect(self.selectFolder)
         
-        #self.connect(self.ui.submitComment, QtCore.SIGNAL("clicked()"), self.createComment)
+        self.connect(self.ui.submitComment, QtCore.SIGNAL("clicked()"), self.createComment)
         
         self.ui.frame.setVisible(False)
         
@@ -58,7 +54,7 @@ class FolderView(QtGui.QDialog):
             if self.sharedOnly:
                 pass #SharedRoot
             else:
-                for node in self.session.query(Node).filter(and_(Node.user_id==self.UserID, Node.parent==None)):
+                for node in self.session.query(Node).filter(and_(Node.user_id==self.user, Node.parent==None)):
                     list.append((1, node.id, node.name, ''))
         else:
             if self.sharedOnly:
@@ -70,7 +66,7 @@ class FolderView(QtGui.QDialog):
                 
                 for node in self.session.query(Node)\
                     .filter(and_(
-                        Node.user_id==self.UserID,
+                        Node.user_id==self.user,
                         Node.id.in_(children)
                     )):
                     list.append((1, node.id, node.name, ''))
@@ -78,21 +74,20 @@ class FolderView(QtGui.QDialog):
                     list.append((2, file.id, file.name, extractIcon(file.extension)))
         return list
     
-    '''def createComment(self):
-        query = QtSql.QSqlQuery(Queries.INSERT['Comment'])
-        query.bindValue(0, self.UserID)
-        query.bindValue(1, self.FileID)
-        query.bindValue(2, self.ui.myComment.text())
-        if query.exec_():
-            self.ui.myComment.setText("")
-            self.CommentsModel.setQuery(self.commentQuery())
+    def createComment(self):
+        self.session.add(Comment(text = wrapNone(self.ui.myComment.text()), user_id = self.user, file_id = self.file))
+        self.session.commit()
+        self.CommentsModel.setStringList(self.commentQuery(self.file))
     
-    def commentQuery(self):
-        query = QtSql.QSqlQuery(Queries.SELECT['Comments'])
-                                
-        query.bindValue(0, self.FileID)
-        query.exec_()
-        return query'''
+    def commentQuery(self, file_id):
+        list = []
+        file = self.session.query(File).filter(File.id==self.file).one()
+        for comment in file.comments:
+            if comment.user.first_name is None and comment.user.last_name is None:
+                list.append('{}:{}'.format(comment.user.login, comment.text))
+            else:
+                list.append('{} {}:{}'.format(comment.user.first_name, comment.user.last_name, comment.text))
+        return list
     
     def doubleClicked(self, index):
         self.ui.frame.setVisible(False)
@@ -100,7 +95,7 @@ class FolderView(QtGui.QDialog):
         
         self.model.setDataList(self.execQuery())
         if type==0:
-            self.otherView = FolderView(self, self.UserID, True, self.model.record(i).value(1).toInt()[0])
+            self.otherView = FolderView(self, self.user, True, self.model.record(i).value(1).toInt()[0])
             self.otherView.open()
             if self.otherView.copy is not None:
                 self.copy = self.otherView.copy
@@ -112,11 +107,11 @@ class FolderView(QtGui.QDialog):
             self.ui.history.setCurrentItem(self.ui.history.item(self.ui.history.count()-1))
             self.model.setDataList(self.execQuery())
         else:
-            self.FileID = self.model.data(index, ItemIDRole)
+            self.file = self.model.data(index, ItemIDRole)
             self.ui.fileName.setText("File: " + self.model.data(index, ItemNameRole))
             self.ui.rating.setText("Rating: " + ratingStr(self.model.data(index, ItemRatingRole)))
             self.ui.shared.setText("Shared: " + str(self.model.data(index, ItemIsSharedRole)))
-            #self.CommentsModel.setQuery(self.commentQuery())
+            self.CommentsModel.setStringList(self.commentQuery(self.file))
             self.ui.frame.setVisible(True)
         
     def selectFolder(self, item):
@@ -149,7 +144,7 @@ class FolderView(QtGui.QDialog):
         self.fileAddMenu.popup(self.mapToGlobal(point))
     
     def folderAdd(self):
-        self.FP = FolderProperties(self, self.folder, self.UserID)
+        self.FP = FolderProperties(self, self.folder, self.user)
         self.FP.open()
     
     def fileAdd(self):
