@@ -42,14 +42,17 @@ class LoginForm(QtGui.QDialog):
         self.connect(self.ui.enterButton, QtCore.SIGNAL("clicked()"), self.tryToLogin)
         self.connect(self.ui.registerButton, QtCore.SIGNAL("clicked()"), self.register)
                 
-        with open('session.conf') as f:
-            s = base64.b64decode(f.read())
-            login = s[:20].rstrip()
-            password = s[20:].rstrip()
-            self.loginEdit.setText(login)
-            self.passwordEdit.setText(password)
-            self.ui.rememberMe.setChecked(True)
-            
+        try:
+            with open('session.conf') as f:
+                s = base64.b64decode(f.read())
+                login = s[:20].rstrip()
+                password = s[20:].rstrip()
+                self.loginEdit.setText(login)
+                self.passwordEdit.setText(password)
+                self.ui.rememberMe.setChecked(True)
+        except:
+            pass
+        
         self.session = Session()
         if self.session is None:
             QtGui.QMessageBox.critical(self, "Error", "Database not connected. You will not be able to log in.")

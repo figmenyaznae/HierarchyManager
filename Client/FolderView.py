@@ -45,6 +45,8 @@ class FolderView(QtGui.QDialog):
         self.ui.history.itemClicked.connect(self.selectFolder)
         
         self.connect(self.ui.submitComment, QtCore.SIGNAL("clicked()"), self.createComment)
+        self.connect(self.ui.rating, QtCore.SIGNAL("clicked()"), self.setRaiting)
+        self.connect(self.ui.isShared, QtCore.SIGNAL("stateChanged(int)"), self.setShared)
         
         self.ui.frame.setVisible(False)
         
@@ -115,6 +117,22 @@ class FolderView(QtGui.QDialog):
                     ))
         return list
     
+    def setRaiting(self):
+        file = self.session.query(Rating).filter(and_(
+            Rating.user_id==self.user,
+            Rating.file_id==self.file
+        )).one_or_none()
+        if file is None:
+            self.session.add(Raiting(value=3, user_id=self.user, file_id=self.file))
+        else:
+            file.value=3
+        self.session.commit()
+    
+    def setShared(self, state):
+        file = self.session.query(File).filter(File.id==self.file).one()
+        file.is_shared = state == QtCore.Qt.Checked
+        self.session.commit()
+    
     def createComment(self):
         self.session.add(Comment(text = wrapNone(self.ui.myComment.text()), user_id = self.user, file_id = self.file))
         self.session.commit()
@@ -150,9 +168,9 @@ class FolderView(QtGui.QDialog):
             self.model.setDataList(self.execQuery())
         else:
             self.file = self.model.data(index, ItemIDRole)
-            self.ui.fileName.setText("File: " + self.model.data(index, ItemNameRole))
-            self.ui.rating.setText("Rating: " + ratingStr(self.model.data(index, ItemRatingRole)))
-            self.ui.shared.setText("Shared: " + str(self.model.data(index, ItemIsSharedRole)))
+            self.ui.fileName.setText(self.model.data(index, ItemNameRole))
+            self.ui.rating.setText(ratingStr(self.model.data(index, ItemRatingRole)))
+            self.ui.isShared.setChecked(self.model.data(index, ItemIsSharedRole))
             self.CommentsModel.setStringList(self.commentQuery(self.file))
             self.ui.frame.setVisible(True)
         

@@ -47,14 +47,15 @@ class FileProperties(QtGui.QDialog):
                 self.multipleFiles = []
                 for file in fileNames:
                     self.multipleFiles.append(EditedFile(
-                        name = QtCore.QFileInfo(file).baseName(),
+                        name = getFileName(file),
                         path = file,
                         ext_id = self.ui.fileExt.currentIndex(),
                         is_shared = self.ui.isShared.checkState() == QtCore.Qt.Checked
                     ))
                     self.resetState(lambda x: 0)
-                    
-            self.ui.filePath.setText(fileNames[0])
+            else:
+                self.ui.nameEdit.setText(getFileName(fileNames[0]))
+                self.ui.filePath.setText(fileNames[0])
     
     def saveState(self):        
         self.multipleFiles[self.fileNo] = EditedFile(

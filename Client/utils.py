@@ -1,4 +1,5 @@
-wrapNone = lambda s: None if s=='' else str(s)
+from PyQt4 import QtCore
+wrapNone = lambda s: None if s=='' else unicode(s)
 
 extractIcon = lambda obj: '' if obj is None else obj.icon
 
@@ -12,7 +13,14 @@ def ratingStr(rating):
         if rating is None: return 'Not available'
         s = ""
         for i in xrange(rating):
-            s += "*"
+            s += u"\xab"
         for i in xrange(rating,5):
-            s += "-"
+            s += u"\xb6"
         return s
+
+def getFileName(s):
+    s = unicode(QtCore.QFileInfo(s).fileName())
+    if s.rfind('.')!=-1:
+        s = s[:s.rfind('.')]
+    return s
+    

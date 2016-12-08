@@ -45,7 +45,6 @@ class FolderModel(QtCore.QAbstractListModel):
                 s = self.record[index.row()].icon
                 if s is None or s=="":
                     s = "file.png"
-                print s
                 icon = QtGui.QIcon(s)
             return icon
         elif index.isValid() and role==ItemIDRole:
