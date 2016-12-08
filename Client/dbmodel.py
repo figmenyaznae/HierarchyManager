@@ -22,6 +22,8 @@ class File(Base):
     name = Column(String)
     extension_id = Column(ForeignKey('FileExtensions.id'))
     extension = relationship('FileExtension')
+    user_id = Column(ForeignKey('Users.id'))
+    user = relationship('User', backref='files')
     path = Column(String)
     is_shared = Column(Boolean)
 

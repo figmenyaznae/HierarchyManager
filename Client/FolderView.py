@@ -1,7 +1,7 @@
 #!/usr/bin/python2.7
 
 from PyQt4 import QtGui, QtCore, QtSql, uic
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from FolderModel import *
 from FolderProperties import *
 from FileProperties import *
@@ -79,7 +79,6 @@ class FolderView(QtGui.QDialog):
                     self.session.query(Node)
                     .filter(
                         and_(
-                            Node.user_id==self.user,
                             Node.id.in_(children),
                             Node.is_shared
                         )
@@ -101,12 +100,15 @@ class FolderView(QtGui.QDialog):
                     ))
             else:
                 for node in self.session.query(Node).filter(and_(
-                        Node.user_id==self.user,
+                        or_(Node.is_shared, Node.user_id==self.user),
                         Node.id.in_(children)
                     )):
                     list.append(FolderItem(*(1, node.id, node.name, ''), is_shared=node.is_shared))
                     
-                for file in self.session.query(File).filter(File.id.in_(files)):
+                for file in self.session.query(File).filter(and_(
+                    or_(File.is_shared, File.user_id==self.user),
+                    File.id.in_(files)
+                )):
                     list.append(FolderItem(
                         2,
                         file.id,
@@ -122,6 +124,19 @@ class FolderView(QtGui.QDialog):
             Rating.user_id==self.user,
             Rating.file_id==self.file
         )).one_or_none()
+        self.setRaingWindow = QtGui.QDialog(self)
+        self.setRaingWindow.resize(80,30)
+        buttons = [QtGui.QPushButton() for _ in xrange(5)]
+        layout = QtGui.QHBoxLayout()
+        i = 0
+        for button in buttons:
+            button.setFont(QtGui.QFont('Wingdings', 16))
+            button.setText(u"\xb6")
+            button.ratingValue = i
+            layout.addWidget(button)
+            i += 1
+        self.setRaingWindow.setLayout(layout)
+        self.setRaingWindow.open()
         if file is None:
             self.session.add(Raiting(value=3, user_id=self.user, file_id=self.file))
         else:
@@ -157,8 +172,6 @@ class FolderView(QtGui.QDialog):
         if type==0:
             self.otherView = FolderView(self, self.model.data(index, ItemIDRole), True, self.user)
             self.otherView.open()
-            if self.otherView.copy is not None:
-                self.copy = self.otherView.copy
         elif type==1:
             self.folder = self.model.data(index, ItemIDRole)
             folder = QtGui.QListWidgetItem(self.model.data(index, ItemNameRole)+" >")
@@ -193,14 +206,28 @@ class FolderView(QtGui.QDialog):
         self.fileAddMenu = QtGui.QMenu()
         if not self.sharedOnly:
             self.fileAddMenu.addAction("Add folder", self.folderAdd)
-            if self.folder != 0:
+            if self.folder:
                 self.fileAddMenu.addAction("Add file", self.fileAdd)
-        if len(self.ui.mainView.selectedIndexes())>0:
+        if len(self.ui.mainView.selectedIndexes())>0 and self.folder != 0:
             self.fileAddMenu.addAction("Copy", self.objCopy)
-        if not self.sharedOnly and self.copy!=None:
-            self.fileAddMenu.addAction("Paste", self.objPaste)
-        if not self.sharedOnly and len(self.ui.mainView.selectedIndexes())>0:
-            self.fileAddMenu.addAction("Delete", self.objDelete)    
+        if not self.sharedOnly:
+            indexes = self.ui.mainView.selectedIndexes()
+            if self.folder and self.copy:
+                self.fileAddMenu.addAction("Paste", self.objPaste)
+            if len(indexes)>0:
+                self.fileAddMenu.addAction("Delete", self.objDelete)
+            if len(indexes)==1:
+                index = indexes[0]
+                if self.model.data(index, ItemTypeRole)==1:
+                    self.target = self.model.data(index, ItemIDRole)
+                    folder = self.session.query(Node).filter(Node.id==self.target).one()
+                    if folder.user_id==self.user:
+                        if folder.is_shared:
+                            self.fileAddMenu.addAction("Unshare", self.folderUnshare)
+                        else:
+                            self.fileAddMenu.addAction("Share", self.folderShare)
+                
+                
         self.fileAddMenu.popup(self.mapToGlobal(point))
     
     def folderAdd(self):
@@ -208,17 +235,24 @@ class FolderView(QtGui.QDialog):
         self.FP.open()
     
     def fileAdd(self):
-        self.FP = FileProperties(self, self.folder)
+        self.FP = FileProperties(self, self.user, self.folder)
         self.FP.open()
         
     def objCopy(self):
         indexes = self.ui.mainView.selectedIndexes()
-        self.copy = []
+        if self.sharedOnly:
+            self.parent.copy = []
+        else:
+            self.copy = []
+        
         for i in indexes:
             type = self.model.data(i, ItemTypeRole)
             if type!=0:
                 rec = {'Type':type, 'ID':self.model.data(i, ItemIDRole)}
-                self.copy.append(rec)
+                if self.sharedOnly:
+                    self.parent.copy.append(rec)
+                else:
+                    self.copy.append(rec)
     
     def objPaste(self):
         if self.copy!=None:
@@ -267,3 +301,18 @@ class FolderView(QtGui.QDialog):
                     self.session.commit()
                     
         self.model.setDataList(self.execQuery())
+        
+    def folderUnshare(self):
+        print 'unshare'
+        folder = self.session.query(Node).filter(Node.id==self.target).one()
+        print folder
+        folder.is_shared = False
+        self.session.commit()
+        
+        
+    def folderShare(self):
+        print 'share'
+        folder = self.session.query(Node).filter(Node.id==self.target).one()
+        print folder
+        folder.is_shared = True
+        self.session.commit()

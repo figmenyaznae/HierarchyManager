@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Hierarchy Manager</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>folder.png</normaloff>folder.png</iconset>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
     <widget class="QListWidget" name="history">

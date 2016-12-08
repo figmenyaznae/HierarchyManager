@@ -12,9 +12,10 @@ class EditedFile(object):
         self.is_shared = is_shared
 
 class FileProperties(QtGui.QDialog):
-    def __init__(self, parent, folder):
+    def __init__(self, user, parent, folder):
         QtGui.QDialog.__init__(self, parent)
         self.ui = uic.loadUi("FileProperties.ui", self)
+        self.userID = user
         self.folderID = folder
         self.multipleFiles = None
         self.fileNo = 0
@@ -75,7 +76,7 @@ class FileProperties(QtGui.QDialog):
             self.ui.nextButton.setEnabled(False)
         
         self.ui.progressLabel.setText(
-            '{}/{}'.format(self.fileNo, len(self.multipleFiles))
+            '{}/{}'.format(self.fileNo + 1, len(self.multipleFiles))
         )
         
         file = self.multipleFiles[self.fileNo]
@@ -112,6 +113,7 @@ class FileProperties(QtGui.QDialog):
                 extension = extension,
                 path = wrapNone(file.path),
                 is_shared = file.is_shared,
+                user_id = self.userID,
                 folders=[parent]
             ))
             
