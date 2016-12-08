@@ -13,7 +13,7 @@ class FileExtension(Base):
     icon = Column(String)
 
     def __repr__(self):
-       return "<FileExtension(name='%s', mask='%s', icon='%s')>" % (self.mask, self.extension, self.icon)
+       return '<FileExtension(name={}, mask={}, icon={})>'.format(self.mask, self.extension, self.icon)
 
 class File(Base):
     __tablename__ = 'Files'
@@ -26,7 +26,7 @@ class File(Base):
     is_shared = Column(Boolean)
 
     def __repr__(self):
-       return "<File(name='%s', extension='%d', path='%s', isShared='%r')>" % (self.name, self.extension_id, self.path, is_shared)
+       return '<File(name={}, extension={}, path={}, isShared={})>'.format(self.name, self.extension_id, self.path, self.is_shared)
     
 class User(Base):
     __tablename__ = 'Users'
@@ -37,7 +37,7 @@ class User(Base):
     last_name = Column(String(100))
     
     def __repr__(self):
-       return "<User(login='%s', password='%s', first_name='%s', last_name='%s')>" % (self.login, self.password, self.first_name, self.last_name)
+       return '<User(login={}, password={}, first_name={}, last_name={})>'.format(self.login, self.password, self.first_name, self.last_name)
 
 edges_table = Table('Edges', Base.metadata,
     Column('child_id', Integer, ForeignKey('Nodes.id')),
@@ -61,7 +61,7 @@ class Node(Base):
     files = relationship('File', secondary=node_files_table, backref='folders')
 
     def __repr__(self):
-        return "<Node(name='%s', user_id='%d', isShared='%r')>" % (self.name, self.user_id, self.is_shared)
+        return '<Node(name={}, user_id={}, isShared={})>'.format(self.name, self.user_id, self.is_shared)
 
 class Comment(Base):
     __tablename__ = 'Comments'
@@ -74,7 +74,7 @@ class Comment(Base):
     file = relationship('File', backref='comments')
     
     def __repr__(self):
-        return "<Comment(name='%s', user_id='%d', file_id='%d')>" % (self.text, self.user_id, self.file_id)
+        return '<Comment(name={}, user_id={}, file_id={})>'.format(self.text, self.user_id, self.file_id)
 
 class Rating(Base):
     __tablename__ = 'Ratings'
@@ -87,4 +87,4 @@ class Rating(Base):
     file = relationship('File', backref='ratings')
     
     def __repr__(self):
-        return "<Rating(value='%d', user_id='%d', file_id='%d')>" % (self.value, self.user_id, self.file_id)
+        return '<Rating(value={}, user_id={}, file_id={})>'.format(self.value, self.user_id, self.file_id)

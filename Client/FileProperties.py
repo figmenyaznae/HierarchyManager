@@ -24,6 +24,8 @@ class FileProperties(QtGui.QDialog):
         self.connect(self.ui.acceptButton, QtCore.SIGNAL("clicked()"), self.accept)
         self.connect(self.ui.declineButton, QtCore.SIGNAL("clicked()"), self.close)
         self.connect(self.ui.openDialog, QtCore.SIGNAL("clicked()"), self.fileDialog)
+        self.connect(self.ui.prevButton, QtCore.SIGNAL("clicked()"), self.prevClicked)
+        self.connect(self.ui.nextButton, QtCore.SIGNAL("clicked()"), self.nextClicked)
         
         
         self.ui.fileExt.addItem("-",QtCore.QVariant(0))
@@ -42,36 +44,76 @@ class FileProperties(QtGui.QDialog):
             fileNames = dialog.selectedFiles();
             if len(fileNames)>1:
                 self.ui.navigationFrame.setVisible(True)
-                self.multipleFile = []
+                self.multipleFiles = []
                 for file in fileNames:
-                    self.multipleFile.append(EditedFile(
-                        name = QtCore.QFileInfo(file).baseName,
-                        path = file
+                    self.multipleFiles.append(EditedFile(
+                        name = QtCore.QFileInfo(file).baseName(),
+                        path = file,
+                        ext_id = self.ui.fileExt.currentIndex(),
+                        is_shared = self.ui.isShared.checkState() == QtCore.Qt.Checked
                     ))
-                self.ui.prevButton.setEnabled(False)
-                self.ui.progressLabel.setText(
-                    '{}/{}'.format(self.fileNo, len(fileNames))
-                )
-            print [s for s in fileNames]
+                    self.resetState(lambda x: 0)
+                    
             self.ui.filePath.setText(fileNames[0])
+    
+    def saveState(self):        
+        self.multipleFiles[self.fileNo] = EditedFile(
+            name = self.ui.nameEdit.text(),
+            ext_id = self.ui.fileExt.currentIndex(),
+            path = self.ui.filePath.text(),
+            is_shared = self.ui.isShared.checkState() == QtCore.Qt.Checked
+        )
+    
+    def resetState(self, change):        
+        self.fileNo = change(self.fileNo)
+        self.ui.prevButton.setEnabled(True)
+        self.ui.nextButton.setEnabled(True)
+        if self.fileNo == 0:
+            self.ui.prevButton.setEnabled(False)
+        elif self.fileNo == len(self.multipleFiles) - 1:
+            self.ui.nextButton.setEnabled(False)
+        
+        self.ui.progressLabel.setText(
+            '{}/{}'.format(self.fileNo, len(self.multipleFiles))
+        )
+        
+        file = self.multipleFiles[self.fileNo]
+        self.ui.nameEdit.setText(file.name)
+        self.ui.fileExt.setCurrentIndex(file.ext_id)
+        self.ui.filePath.setText(file.path)
+        self.ui.isShared.setChecked(file.is_shared)
+    
+    def prevClicked(self):
+        self.saveState()
+        self.resetState(lambda x: x - 1)
+    
+    def nextClicked(self):
+        self.saveState()
+        self.resetState(lambda x: x + 1)
     
     def accept(self):
         parent = self.session.query(Node).filter(Node.id==self.folderID).one()
         
-        extensionId = self.ui.fileExt.itemData(self.ui.fileExt.currentIndex()).toInt()[0]
-        if extensionId!=0:
-            extension = self.session.query(FileExtension)\
-                .filter(FileExtension.id==extensionId).one()
-        else:
-            extension = None
-        
-        self.session.add(File(
-            name = wrapNone(self.ui.nameEdit.text()),
-            extension = extension,
-            path = wrapNone(self.ui.filePath.text()),
-            is_shared = self.isShared.checkState()==QtCore.Qt.Checked,
-            folders=[parent]
-        ))
+        if not self.multipleFiles:
+            self.multipleFiles = []
+            self.saveState()
+            
+        for file in self.multipleFiles:
+            extensionId = self.ui.fileExt.itemData(file.ext_id).toInt()[0]
+            if extensionId!=0:
+                extension = self.session.query(FileExtension)\
+                    .filter(FileExtension.id==extensionId).one()
+            else:
+                extension = None
+            
+            self.session.add(File(
+                name = wrapNone(file.name),
+                extension = extension,
+                path = wrapNone(file.path),
+                is_shared = file.is_shared,
+                folders=[parent]
+            ))
+            
         self.session.commit()
         self.parent().model.setDataList(self.parent().execQuery())
         self.close()
