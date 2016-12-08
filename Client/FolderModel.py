@@ -10,11 +10,13 @@ ItemRatingRole = QtCore.Qt.UserRole+2
 ItemIsSharedRole = QtCore.Qt.UserRole+3
 
 class FolderItem(object):
-    def __init__(self, type, id, name, icon):
+    def __init__(self, type, id, name, icon = '', rating = 0, is_shared = False):
         self.type = type
         self.id = id
         self.name = name
         self.icon = icon
+        self.rating = rating
+        self.is_shared = is_shared
 
 class FolderModel(QtCore.QAbstractListModel): 
     def __init__(self):
@@ -24,7 +26,7 @@ class FolderModel(QtCore.QAbstractListModel):
     def setDataList(self, list):
         self.record = []
         for record in list:
-            self.record.append(FolderItem(*record))
+            self.record.append(record)
         self. modelReset.emit()
     
     def rowCount(self, parent):
@@ -49,5 +51,9 @@ class FolderModel(QtCore.QAbstractListModel):
             return self.record[index.row()].id
         elif index.isValid() and role==ItemTypeRole:
             return self.record[index.row()].type
+        elif index.isValid() and role==ItemRatingRole:
+            return self.record[index.row()].rating
+        elif index.isValid() and role==ItemIsSharedRole:
+            return self.record[index.row()].is_shared
         else:
             return None

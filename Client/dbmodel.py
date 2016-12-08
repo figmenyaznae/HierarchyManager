@@ -55,7 +55,7 @@ class Node(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     user_id = Column(ForeignKey('Users.id'))
-    user = relationship('User')
+    user = relationship('User', backref='folders')
     is_shared = Column(Boolean)
     parent = relationship('Node', secondary=edges_table, primaryjoin=edges_table.c.child_id==id, secondaryjoin=edges_table.c.parent_id==id, backref='children')
     files = relationship('File', secondary=node_files_table, backref='folders')
@@ -75,3 +75,16 @@ class Comment(Base):
     
     def __repr__(self):
         return "<Comment(name='%s', user_id='%d', file_id='%d')>" % (self.text, self.user_id, self.file_id)
+
+class Rating(Base):
+    __tablename__ = 'Ratings'
+    
+    id = Column(Integer, primary_key=True)
+    value = Column(Integer)
+    user_id = Column(ForeignKey('Users.id'))
+    user = relationship('User')
+    file_id = Column(ForeignKey('Files.id'))
+    file = relationship('File', backref='ratings')
+    
+    def __repr__(self):
+        return "<Rating(value='%d', user_id='%d', file_id='%d')>" % (self.value, self.user_id, self.file_id)

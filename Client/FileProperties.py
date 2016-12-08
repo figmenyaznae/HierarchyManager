@@ -4,11 +4,20 @@ from DbConfig import *
 from DbModel import *
 from utils import *
 
+class EditedFile(object):
+    def __init__(self, name, ext_id, path, is_shared):
+        self.name = name
+        self.ext_id = ext_id
+        self.path = path
+        self.is_shared = is_shared
+
 class FileProperties(QtGui.QDialog):
     def __init__(self, parent, folder):
         QtGui.QDialog.__init__(self, parent)
         self.ui = uic.loadUi("FileProperties.ui", self)
         self.folderID = folder
+        self.multipleFiles = None
+        self.fileNo = 0
         self.session = Session()
         self.navigationFrame.setVisible(False)
         
@@ -24,11 +33,27 @@ class FileProperties(QtGui.QDialog):
     def fileDialog(self):
         dialog = QtGui.QFileDialog(self)
         dialog.setFileMode(QtGui.QFileDialog.ExistingFiles)
-        #TODO filtering
+        s = ['All (*)']
+        for ext in self.session.query(FileExtension).all():
+            s.append('{} ({})'.format(ext.name, ext.mask))
+        dialog.setFilters(s)
+        dialog.selectFilter(s[self.ui.fileExt.currentIndex()])
         if dialog.exec_():
             fileNames = dialog.selectedFiles();
-        print [s for s in fileNames]
-        self.ui.filePath.setText(dialog)
+            if len(fileNames)>1:
+                self.ui.navigationFrame.setVisible(True)
+                self.multipleFile = []
+                for file in fileNames:
+                    self.multipleFile.append(EditedFile(
+                        name = QtCore.QFileInfo(file).baseName,
+                        path = file
+                    ))
+                self.ui.prevButton.setEnabled(False)
+                self.ui.progressLabel.setText(
+                    '{}/{}'.format(self.fileNo, len(fileNames))
+                )
+            print [s for s in fileNames]
+            self.ui.filePath.setText(fileNames[0])
     
     def accept(self):
         parent = self.session.query(Node).filter(Node.id==self.folderID).one()

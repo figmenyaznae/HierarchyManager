@@ -52,31 +52,73 @@ class FolderView(QtGui.QDialog):
         list = []
         if self.folder==0:
             if self.sharedOnly:
-                pass #SharedRoot
+                for node in self.session.query(Node).filter(and_(
+                        Node.user_id==self.user,
+                        Node.parent==None,
+                        Node.is_shared
+                    )):
+                    list.append(FolderItem(*(1, node.id, node.name)))
             else:
                 for node in self.session.query(Node).filter(and_(Node.user_id==self.user, Node.parent==None)):
-                    list.append((1, node.id, node.name, ''))
+                    list.append(FolderItem(*(1, node.id, node.name)))
+                    
+                for user in self.session.query(User).all():
+                    if self.session.query(Node).filter(and_(
+                        Node.user == user,
+                        Node.is_shared
+                    )).count()>0 and user.id != self.user:
+                        list.append(FolderItem(*(0, user.id, user.login)))
         else:
+            parent = self.session.query(Node).filter(Node.id==self.folder).one()
+            children = [node.id for node in parent.children]
+            files = [file.id for file in parent.files]
             if self.sharedOnly:
-                pass #SharedFolder
+                for node in (
+                    self.session.query(Node)
+                    .filter(
+                        and_(
+                            Node.user_id==self.user,
+                            Node.id.in_(children),
+                            Node.is_shared
+                        )
+                    )
+                ):
+                    list.append(FolderItem(*(1, node.id, node.name), is_shared = node.is_shared))
+                    
+                for file in self.session.query(File).filter(and_(
+                    File.id.in_(files),
+                    File.is_shared
+                )):
+                    list.append(FolderItem(
+                        2,
+                        file.id,
+                        file.name,
+                        extractIcon(file.extension),
+                        getRaiting(file),
+                        file.is_shared
+                    ))
             else:
-                parent = self.session.query(Node).filter(Node.id==self.folder).one()
-                children = [node.id for node in parent.children]
-                files = [file.id for file in parent.files]
-                
-                for node in self.session.query(Node)\
-                    .filter(and_(
+                for node in self.session.query(Node).filter(and_(
                         Node.user_id==self.user,
                         Node.id.in_(children)
                     )):
-                    list.append((1, node.id, node.name, ''))
+                    list.append(FolderItem(*(1, node.id, node.name, ''), is_shared=node.is_shared))
+                    
                 for file in self.session.query(File).filter(File.id.in_(files)):
-                    list.append((2, file.id, file.name, extractIcon(file.extension)))
+                    list.append(FolderItem(
+                        2,
+                        file.id,
+                        file.name,
+                        extractIcon(file.extension),
+                        getRaiting(file),
+                        file.is_shared
+                    ))
         return list
     
     def createComment(self):
         self.session.add(Comment(text = wrapNone(self.ui.myComment.text()), user_id = self.user, file_id = self.file))
         self.session.commit()
+        self.ui.myComment.clear()
         self.CommentsModel.setStringList(self.commentQuery(self.file))
     
     def commentQuery(self, file_id):
@@ -84,9 +126,9 @@ class FolderView(QtGui.QDialog):
         file = self.session.query(File).filter(File.id==self.file).one()
         for comment in file.comments:
             if comment.user.first_name is None and comment.user.last_name is None:
-                list.append('{}:{}'.format(comment.user.login, comment.text))
+                list.append('{}: {}'.format(comment.user.login, comment.text))
             else:
-                list.append('{} {}:{}'.format(comment.user.first_name, comment.user.last_name, comment.text))
+                list.append('{} {}: {}'.format(comment.user.first_name, comment.user.last_name, comment.text))
         return list
     
     def doubleClicked(self, index):
@@ -95,7 +137,7 @@ class FolderView(QtGui.QDialog):
         
         self.model.setDataList(self.execQuery())
         if type==0:
-            self.otherView = FolderView(self, self.user, True, self.model.record(i).value(1).toInt()[0])
+            self.otherView = FolderView(self, self.model.data(index, ItemIDRole), True, self.user)
             self.otherView.open()
             if self.otherView.copy is not None:
                 self.copy = self.otherView.copy
@@ -137,9 +179,9 @@ class FolderView(QtGui.QDialog):
                 self.fileAddMenu.addAction("Add file", self.fileAdd)
         if len(self.ui.mainView.selectedIndexes())>0:
             self.fileAddMenu.addAction("Copy", self.objCopy)
-        if self.copy!=None:
+        if not self.sharedOnly and self.copy!=None:
             self.fileAddMenu.addAction("Paste", self.objPaste)
-        if len(self.ui.mainView.selectedIndexes())>0:
+        if not self.sharedOnly and len(self.ui.mainView.selectedIndexes())>0:
             self.fileAddMenu.addAction("Delete", self.objDelete)    
         self.fileAddMenu.popup(self.mapToGlobal(point))
     
