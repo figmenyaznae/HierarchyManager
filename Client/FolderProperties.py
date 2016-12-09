@@ -5,12 +5,11 @@ from DbModel import *
 from utils import *
 
 class FolderProperties(QtGui.QDialog):
-    def __init__(self, parent, parentFolder, user, folder = 0):
+    def __init__(self, parent, parentFolder, user):
         QtGui.QDialog.__init__(self, parent)
         self.ui = uic.loadUi("FolderProperties.ui", self)
         self.parentID = parentFolder
         self.userID = user
-        #self.selfID = folder #TODO
         self.session = Session()
         self.connect(self.ui.acceptButton, QtCore.SIGNAL("clicked()"), self.accept)
         self.connect(self.ui.declineButton, QtCore.SIGNAL("clicked()"), self.close)

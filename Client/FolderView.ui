@@ -44,11 +44,17 @@
        <property name="horizontalScrollBarPolicy">
         <enum>Qt::ScrollBarAlwaysOff</enum>
        </property>
+       <property name="dragEnabled">
+        <bool>true</bool>
+       </property>
        <property name="dragDropMode">
         <enum>QAbstractItemView::DragDrop</enum>
        </property>
        <property name="selectionMode">
-        <enum>QAbstractItemView::ContiguousSelection</enum>
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+       <property name="isWrapping" stdset="0">
+        <bool>true</bool>
        </property>
        <property name="layoutMode">
         <enum>QListView::SinglePass</enum>
@@ -59,17 +65,11 @@
        <property name="gridSize">
         <size>
          <width>80</width>
-         <height>120</height>
+         <height>100</height>
         </size>
        </property>
        <property name="viewMode">
         <enum>QListView::IconMode</enum>
-       </property>
-       <property name="uniformItemSizes">
-        <bool>false</bool>
-       </property>
-       <property name="wordWrap">
-        <bool>true</bool>
        </property>
       </widget>
      </item>

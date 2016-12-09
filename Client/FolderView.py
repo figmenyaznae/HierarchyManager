@@ -5,6 +5,7 @@ from sqlalchemy import and_, or_
 from FolderModel import *
 from FolderProperties import *
 from FileProperties import *
+from StarButton import *
 from DbConfig import *
 from DbModel import *
 from utils import *
@@ -120,28 +121,8 @@ class FolderView(QtGui.QDialog):
         return list
     
     def setRaiting(self):
-        file = self.session.query(Rating).filter(and_(
-            Rating.user_id==self.user,
-            Rating.file_id==self.file
-        )).one_or_none()
-        self.setRaingWindow = QtGui.QDialog(self)
-        self.setRaingWindow.resize(80,30)
-        buttons = [QtGui.QPushButton() for _ in xrange(5)]
-        layout = QtGui.QHBoxLayout()
-        i = 0
-        for button in buttons:
-            button.setFont(QtGui.QFont('Wingdings', 16))
-            button.setText(u"\xb6")
-            button.ratingValue = i
-            layout.addWidget(button)
-            i += 1
-        self.setRaingWindow.setLayout(layout)
+        self.setRaingWindow = RatingDialog(self, self.user, self.file)
         self.setRaingWindow.open()
-        if file is None:
-            self.session.add(Raiting(value=3, user_id=self.user, file_id=self.file))
-        else:
-            file.value=3
-        self.session.commit()
     
     def setShared(self, state):
         file = self.session.query(File).filter(File.id==self.file).one()

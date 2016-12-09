@@ -12,7 +12,7 @@ class EditedFile(object):
         self.is_shared = is_shared
 
 class FileProperties(QtGui.QDialog):
-    def __init__(self, user, parent, folder):
+    def __init__(self, parent, user, folder):
         QtGui.QDialog.__init__(self, parent)
         self.ui = uic.loadUi("FileProperties.ui", self)
         self.userID = user

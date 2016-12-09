@@ -27,7 +27,7 @@ class FolderModel(QtCore.QAbstractListModel):
         self.record = []
         for record in list:
             self.record.append(record)
-        self. modelReset.emit()
+        self.modelReset.emit()
     
     def rowCount(self, parent):
         return len(self.record)
