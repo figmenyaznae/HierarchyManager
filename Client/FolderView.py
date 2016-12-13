@@ -284,16 +284,12 @@ class FolderView(QtGui.QDialog):
         self.model.setDataList(self.execQuery())
         
     def folderUnshare(self):
-        print 'unshare'
         folder = self.session.query(Node).filter(Node.id==self.target).one()
-        print folder
         folder.is_shared = False
         self.session.commit()
         
         
     def folderShare(self):
-        print 'share'
         folder = self.session.query(Node).filter(Node.id==self.target).one()
-        print folder
         folder.is_shared = True
         self.session.commit()
